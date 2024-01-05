@@ -28,6 +28,11 @@ if TYPE_CHECKING:  # pragma: no cover
     from gqlauth.jwt.types_ import TokenType
 
 
+class CustomJSONEncoder(json.JSONEncoder):
+    sort_keys = True
+    indent = 1
+
+
 def token_finder(request_or_scope: Union[dict, "HttpRequest"]) -> Optional[str]:
     from gqlauth.core.constants import JWT_PREFIX
 
@@ -56,13 +61,13 @@ def create_token_type(user: "AbstractBaseUser") -> "TokenType":
     payload = TokenPayloadType(
         **pk_field,
     )
-    serialized = json.dumps(payload.as_dict(), sort_keys=True, indent=1)
     return TokenType(
         token=str(
             jwt.encode(
-                payload={"payload": serialized},
+                payload=payload.as_dict(),
                 key=cast(str, app_settings.JWT_SECRET_KEY.value),
                 algorithm=app_settings.JWT_ALGORITHM,
+                json_encoder=CustomJSONEncoder
             )
         ),
         payload=payload,
@@ -72,17 +77,14 @@ def create_token_type(user: "AbstractBaseUser") -> "TokenType":
 def decode_jwt(token: str) -> "TokenType":
     from gqlauth.core.utils import app_settings
     from gqlauth.jwt.types_ import TokenPayloadType, TokenType
-
-    decoded = json.loads(
-        jwt.decode(
-            token,
-            key=cast(str, app_settings.JWT_SECRET_KEY.value),
-            algorithms=[
-                app_settings.JWT_ALGORITHM,
-            ],
-        )["payload"]
+    payload = jwt.decode(
+        token,
+        key=cast(str, app_settings.JWT_SECRET_KEY.value),
+        algorithms=[
+            app_settings.JWT_ALGORITHM,
+        ],
     )
-    return TokenType(token=token, payload=TokenPayloadType.from_dict(decoded))
+    return TokenType(token=token, payload=TokenPayloadType.from_dict(payload))
 
 
 def default_text_factory():
