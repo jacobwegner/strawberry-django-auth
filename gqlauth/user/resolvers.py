@@ -44,6 +44,7 @@ from gqlauth.settings import gqlauth_settings as app_settings
 from gqlauth.user.forms import EmailForm, PasswordLessRegisterForm, RegisterForm, UpdateAccountForm
 from gqlauth.user.helpers import check_captcha, confirm_password
 from gqlauth.user.signals import user_registered, user_verified
+from gqlauth.user.types_ import UserType
 
 UserModel = get_user_model()
 
@@ -524,7 +525,7 @@ class RefreshTokenMixin(BaseMixin):
             return ObtainJSONWebTokenType(success=False, errors=Messages.EXPIRED_TOKEN)
         # fields that are determined by if statements are not recognized by mypy.
         ret = ObtainJSONWebTokenType(
-            success=True, token=TokenType.from_user(user), refresh_token=res  # type: ignore
+            success=True, user=cast(UserType, user), token=TokenType.from_user(user), refresh_token=res  # type: ignore
         )
         if input_.revoke_refresh_token:
             res.revoke()
