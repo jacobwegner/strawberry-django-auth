@@ -1,8 +1,10 @@
+from calendar import timegm
 import dataclasses
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional, cast
 from uuid import UUID
 
+from jwt import ExpiredSignatureError
 import strawberry
 import strawberry_django
 from django.contrib.auth import authenticate
@@ -75,7 +77,7 @@ class TokenPayloadType:
         for field in dataclasses.fields(self):
             value = getattr(self, field.name)
             if isinstance(value, datetime):
-                ret[field.name] = value.strftime(app_settings.JWT_TIME_FORMAT)
+                ret[field.name] = timegm(value.utctimetuple())
         return ret
 
     @classmethod
@@ -97,7 +99,9 @@ class TokenType:
     token: str = strawberry.field(description="The encoded payload, namely a token.")
 
     def is_expired(self):
-        return self.payload.exp < (datetime.utcnow())
+        # TODO: Prefer verifications from PyJWT.decode
+        nowish = datetime.utcnow()
+        return self.payload.exp < timegm(nowish.utctimetuple())
 
     @classmethod
     def from_user(cls, user: "UserProto") -> "TokenType":
@@ -106,7 +110,10 @@ class TokenType:
     @classmethod
     def from_token(cls, token: str) -> "TokenType":
         """Might raise TokenExpired."""
-        token_type: TokenType = app_settings.JWT_DECODE_HANDLER(token)
+        try:
+            token_type: TokenType = app_settings.JWT_DECODE_HANDLER(token)
+        except ExpiredSignatureError:
+            raise TokenExpired
         if token_type.is_expired():
             raise TokenExpired
         return token_type
