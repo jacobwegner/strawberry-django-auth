@@ -1,3 +1,4 @@
+from calendar import timegm
 import dataclasses
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional, cast
@@ -75,7 +76,7 @@ class TokenPayloadType:
         for field in dataclasses.fields(self):
             value = getattr(self, field.name)
             if isinstance(value, datetime):
-                ret[field.name] = value.strftime(app_settings.JWT_TIME_FORMAT)
+                ret[field.name] = timegm(value.utctimetuple())
         return ret
 
     @classmethod
@@ -97,7 +98,9 @@ class TokenType:
     token: str = strawberry.field(description="The encoded payload, namely a token.")
 
     def is_expired(self):
-        return self.payload.exp < (datetime.utcnow())
+        # TODO: Prefer verifications from PyJWT.decode
+        nowish = datetime.utcnow()
+        return self.payload.exp < timegm(nowish.utctimetuple())
 
     @classmethod
     def from_user(cls, user: "UserProto") -> "TokenType":
