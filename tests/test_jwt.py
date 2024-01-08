@@ -17,11 +17,11 @@ def test_expired_refresh_token(db_verified_user_status, app_settings, override_g
 
 
 def test_token_expired(db_verified_user_status, app_settings, override_gqlauth):
-    with override_gqlauth(app_settings.JWT_EXPIRATION_DELTA, timedelta(seconds=0.1)):
-        token: TokenType = TokenType.from_user(db_verified_user_status.user.obj)
-        TokenType.from_token(token.token)
+    with override_gqlauth(app_settings.JWT_EXPIRATION_DELTA, timedelta(seconds=1)):
+        initial_token = TokenType.from_user(db_verified_user_status.user.obj)
+        token = TokenType.from_token(initial_token.token)
         assert not token.is_expired()
-        time.sleep(1)
+        time.sleep(2)
         assert token.is_expired()
         with pytest.raises(TokenExpired):
             TokenType.from_token(token.token)

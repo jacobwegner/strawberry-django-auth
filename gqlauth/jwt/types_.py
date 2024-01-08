@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Optional, cast
 from uuid import UUID
 
+from jwt import ExpiredSignatureError
 import strawberry
 import strawberry_django
 from django.contrib.auth import authenticate
@@ -109,7 +110,10 @@ class TokenType:
     @classmethod
     def from_token(cls, token: str) -> "TokenType":
         """Might raise TokenExpired."""
-        token_type: TokenType = app_settings.JWT_DECODE_HANDLER(token)
+        try:
+            token_type: TokenType = app_settings.JWT_DECODE_HANDLER(token)
+        except ExpiredSignatureError:
+            raise TokenExpired
         if token_type.is_expired():
             raise TokenExpired
         return token_type
