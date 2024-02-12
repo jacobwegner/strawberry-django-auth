@@ -27,6 +27,10 @@ class UserNotVerified(GraphQLAuthError):
     default_message = _("User is not verified.")
 
 
+class UserInactive(GraphQLAuthError):
+    default_message = _("User is inactive.")
+
+
 class TokenScopeError(GraphQLAuthError):
     default_message = _("This token is for something else.")
 
