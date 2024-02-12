@@ -9,7 +9,7 @@ from django.http import HttpRequest
 from django.utils.decorators import sync_and_async_middleware
 from strawberry import Schema
 
-from gqlauth.core.exceptions import TokenExpired
+from gqlauth.core.exceptions import TokenExpired, UserInactive
 from gqlauth.core.types_ import GQLAuthError, GQLAuthErrors
 from gqlauth.core.utils import USER_UNION, app_settings
 from gqlauth.jwt.types_ import TokenType
@@ -38,6 +38,9 @@ def get_user_or_error(scope_or_request: dict | HttpRequest) -> UserOrError:
             token = TokenType.from_token(token=token_str)
             user = token.get_user_instance()
             user_or_error.user = user
+
+        except UserInactive:
+            user_or_error.error = GQLAuthError(code=GQLAuthErrors.INACTIVE)
 
         except PyJWTError:  # raised by python-jwt
             user_or_error.error = GQLAuthError(code=GQLAuthErrors.INVALID_TOKEN)

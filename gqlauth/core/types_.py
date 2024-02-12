@@ -25,6 +25,8 @@ class GQLAuthError(GraphQLError):
 
 class GQLAuthErrors(Enum):
     UNAUTHENTICATED = "Unauthenticated."
+    # TODO: Consider INVALID_CREDENTIALS use case
+    INACTIVE = "Account inactive."
     INVALID_TOKEN = "Invalid token."
     EXPIRED_TOKEN = "Expired token."
     NO_SUFFICIENT_PERMISSIONS = "Permissions found could not satisfy the required permissions."

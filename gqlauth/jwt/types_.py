@@ -14,7 +14,7 @@ from strawberry import auto
 from strawberry.types import Info
 
 from gqlauth.core.constants import Messages
-from gqlauth.core.exceptions import TokenExpired
+from gqlauth.core.exceptions import TokenExpired, UserInactive
 from gqlauth.core.interfaces import OutputInterface
 from gqlauth.core.scalars import ExpectedErrorType
 from gqlauth.core.utils import USER_MODEL, app_settings, inject_fields
@@ -122,7 +122,10 @@ class TokenType:
         """Might raise not existed exception."""
         pk_name = app_settings.JWT_PAYLOAD_PK.python_name
         query = {pk_name: getattr(self.payload, pk_name)}
-        return USER_MODEL.objects.get(**query)  # type: ignore
+        user =  USER_MODEL.objects.get(**query)  # type: ignore
+        if user is not None and not getattr(user, "is_active", True):
+            raise UserInactive
+        return user
 
 
 @strawberry.input
@@ -219,6 +222,8 @@ class VerifyTokenType(OutputInterface):
             token_type = TokenType.from_token(token_input.token)
             user = token_type.get_user_instance()
         except USER_MODEL.DoesNotExist:
+            return VerifyTokenType(success=False, errors=Messages.INVALID_CREDENTIALS)
+        except UserInactive:
             return VerifyTokenType(success=False, errors=Messages.INVALID_CREDENTIALS)
         except TokenExpired:
             return VerifyTokenType(success=False, errors=Messages.EXPIRED_TOKEN)
